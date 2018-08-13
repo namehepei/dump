@@ -1,5 +1,6 @@
-dump_test.go
+
 *.sql
 dumps/20180813/lima/dir.txt
-.idea/codeStyles/codeStyleConfig.xml
+dump_test.go
 .idea/workspace.xml
+.idea/codeStyles/codeStyleConfig.xml
