@@ -6,3 +6,4 @@ dumps/20180813/lima/step_update.sql
 dumps/20180813/lima/step.sql
 *.sql
 dumps/20180813/lima/dir.txt
+.idea/vcs.xml
