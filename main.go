@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"dump/body"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -11,9 +13,7 @@ import (
 	"util/think"
 	"util/thinkFile"
 	"util/thinkHttp"
-	"io/ioutil"
-		"encoding/json"
-	)
+)
 
 func main() {
 	/***********************************************************/
@@ -39,7 +39,7 @@ func getMessageFromFile() map[string][]string {
 	think.Check(err)
 
 	fileMap := make(map[string]interface{})
-	json.Unmarshal(file,&fileMap)
+	json.Unmarshal(file, &fileMap)
 	fmt.Println(fileMap)
 	messageMap := make(map[string][]string)
 	messageMap["userName"] = []string{fileMap["username"].(string)}
