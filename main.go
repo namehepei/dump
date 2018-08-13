@@ -26,7 +26,7 @@ func main() {
 	/***********************************************************/
 	messageMap := getMessageFromCommand()
 	body.MysqlDumpTask(messageMap["nextTime"][0], messageMap["userName"][0], messageMap["password"][0], messageMap["host"][0], messageMap["databases"])
-	//body.RunSql("","","",nil)
+	//body.RunSql(messageMap["userName"][0], messageMap["password"][0], messageMap["host"][0], messageMap["databases"])
 	/***********************************************************/
 	initRouter()
 	http.HandleFunc("/", getHttpFunc)
