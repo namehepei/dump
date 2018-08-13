@@ -1,9 +1,4 @@
 
 dump_test.go
-dumps/20180813/lima/age_discount.sql
-dumps/20180813/lima/test.sql
-dumps/20180813/lima/step_update.sql
-dumps/20180813/lima/step.sql
 *.sql
 dumps/20180813/lima/dir.txt
-.idea/vcs.xml
