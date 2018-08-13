@@ -1,0 +1,9 @@
+{
+  "username": "root",
+  "password": "mysql",
+  "host": "localhost",
+  "timer": "* * * 1 0 0",
+  "databases": [
+    "test","mysql"
+  ]
+}

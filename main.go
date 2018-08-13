@@ -11,7 +11,9 @@ import (
 	"util/think"
 	"util/thinkFile"
 	"util/thinkHttp"
-)
+	"io/ioutil"
+		"encoding/json"
+	)
 
 func main() {
 	/***********************************************************/
@@ -22,7 +24,7 @@ func main() {
 	/***********************************************************/
 	//thinkLog.SetLogFileTask()
 	/***********************************************************/
-	messageMap := getMessage()
+	messageMap := getMessageFromCommand()
 	body.MysqlDumpTask(messageMap["nextTime"][0], messageMap["userName"][0], messageMap["password"][0], messageMap["host"][0], messageMap["databases"])
 	//body.RunSql("","","",nil)
 	/***********************************************************/
@@ -32,7 +34,29 @@ func main() {
 	think.Check(err)
 }
 
-func getMessage() map[string][]string {
+func getMessageFromFile() map[string][]string {
+	file, err := ioutil.ReadFile("./default.json")
+	think.Check(err)
+
+	fileMap := make(map[string]interface{})
+	json.Unmarshal(file,&fileMap)
+	fmt.Println(fileMap)
+	messageMap := make(map[string][]string)
+	messageMap["userName"] = []string{fileMap["username"].(string)}
+	messageMap["password"] = []string{fileMap["password"].(string)}
+	messageMap["host"] = []string{fileMap["host"].(string)}
+	messageMap["nextTime"] = []string{fileMap["timer"].(string)}
+	for i := 0; i < len(fileMap["databases"].([]interface{})); i++ {
+		messageMap["databases"] = append(messageMap["databases"], fileMap["databases"].([]interface{})[i].(string))
+	}
+	fmt.Println("**********************Check Please**********************")
+	for k, v := range messageMap {
+		fmt.Printf("%v : %v\n", k, v)
+	}
+	return messageMap
+}
+
+func getMessageFromCommand() map[string][]string {
 	notice := []string{"username", "password", "host", "timer", "databases"}
 	message := make([][]string, 0)
 	input := bufio.NewScanner(os.Stdin) //初始化一个扫表对象
@@ -47,6 +71,12 @@ func getMessage() map[string][]string {
 	var nextTime = message[3][0]
 	var databases = strings.Split(message[4][0], ",")
 	fmt.Println(len(databases))
+	// 默认值
+	//nextTime := "* * * 1 0 0"
+	//userName := "root"
+	//password := "mysql"
+	//host := "localhost"
+	//databases := []string{"test"}
 	if nextTime == "" {
 		nextTime = "* * * 1 0 0"
 	}
@@ -54,7 +84,7 @@ func getMessage() map[string][]string {
 		userName = "root"
 	}
 	if password == "" {
-		password = "Bank123456().pass"
+		password = "mysql"
 	}
 	if host == "" {
 		host = "localhost"

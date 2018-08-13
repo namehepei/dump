@@ -16,28 +16,7 @@ import (
 var dumpPath = "./dumps/"
 
 // 因为MysqlDump()使用包database.Idb,故会关闭主函数的db,不可以在主函数中存在db的情况下使用
-// 默认值
-//nextTime := "* * * 1 0 0"
-//userName := "root"
-//password := "mysql"
-//host := "localhost"
-//databases := []string{"test"}
 func MysqlDumpTask(nextTime, userName, password, host string, databases []string) {
-	if nextTime == "" {
-		nextTime = "* * * 1 0 0"
-	}
-	if userName == "" {
-		userName = "root"
-	}
-	if password == "" {
-		password = "mysql"
-	}
-	if host == "" {
-		host = "localhost"
-	}
-	if databases == nil || len(databases) == 0 {
-		databases = []string{"test"}
-	}
 	f := func() {
 		for i := 0; i < len(databases); i++ {
 			MysqlDump(userName, password, host, databases[i])

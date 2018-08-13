@@ -13,19 +13,6 @@ import (
 )
 
 func RunSql(userName, password, host string, databases []string) {
-	if userName == "" {
-		userName = "root"
-	}
-	if password == "" {
-		password = "Bank123456().pass"
-	}
-	if host == "" {
-		host = "localhost"
-	}
-	if databases == nil || len(databases) == 0 {
-		databases = []string{"lima", "danger_game"}
-	}
-	//?maxAllowedPacket=1048576
 	sourceName := userName + ":" + password + "@tcp(" + host + ":3306)/test"
 	db := database.SetConn(sourceName)
 	defer db.Close()
