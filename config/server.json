@@ -1,0 +1,11 @@
+{
+  "username": "root",
+  "password": "password",
+  "host": "127.0.0.1",
+  "timer": "* * * 1 0 0",
+  "databases": [
+    "name_one","name_two"
+  ]
+}
+
+

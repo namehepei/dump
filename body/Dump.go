@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"util/database"
+	"util/database/info"
 	"util/think"
 	"util/thinkFile"
 	"util/thinkLog"
@@ -14,19 +15,30 @@ import (
 )
 
 var dumpPath = "./dumps/"
+var addUseDatabase = false
+
+func GetAllDatabase(userName, password, host string) []string {
+	sourceName := userName + ":" + password + "@tcp(" + host + ":3306)/test"
+	db := database.SetConn(sourceName)
+	defer db.Close()
+	return info.GetDatabases()
+}
 
 // 因为MysqlDump()使用包database.Idb,故会关闭主函数的db,不可以在主函数中存在db的情况下使用
 func MysqlDumpTask(nextTime, userName, password, host string, databases []string) {
+	if len(databases) == 0 {
+		databases = GetAllDatabase(userName, password, host)
+	}
 	f := func() {
 		for i := 0; i < len(databases); i++ {
-			MysqlDump(userName, password, host, databases[i])
+			MysqlDump(userName, password, host, databases[i], addUseDatabase)
 		}
 	}
 
 	go thinkTimer.TaskNow(nextTime, f)
 }
 
-func MysqlDump(userName, password, host, DatabaseName string) {
+func MysqlDump(userName, password, host, DatabaseName string, addUseDatabase bool) {
 	// mysql
 	sourceName := userName + ":" + password + "@tcp(" + host + ":3306)/" + DatabaseName
 	thinkLog.DebugLog.Println("db", sourceName)
@@ -46,7 +58,9 @@ func MysqlDump(userName, password, host, DatabaseName string) {
 		DDL := getCreateTable(tableFullName)
 
 		var buffer bytes.Buffer
-		buffer.WriteString("USE " + DatabaseName + ";\n")
+		if addUseDatabase {
+			buffer.WriteString("USE " + DatabaseName + ";\n")
+		}
 		buffer.WriteString("DROP TABLE IF EXISTS `" + TableName + "`;\n")
 		buffer.WriteString(DDL + ";\n")
 		buffer.WriteString("LOCK TABLES `" + TableName + "` WRITE;\n")
@@ -155,7 +169,7 @@ func getInsertValues(tableName string) string {
 
 			buffer.WriteByte('\n')
 			_, err := buffer.Write(bufferInner.Bytes())
-			think.Check(err)
+			think.IsNil(err)
 
 			i++
 			var addSize = 0
