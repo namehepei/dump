@@ -2,7 +2,7 @@
 serv/dump_test.go
 .idea/
 .gitignore
-/cache/user.json
+cache/user.json
 dumps/
 config/
 log/
