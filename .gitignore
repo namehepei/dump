@@ -1,6 +1,8 @@
-
 *.sql
-dumps/20180813/lima/dir.txt
-dump_test.go
-.idea/workspace.xml
-.idea/codeStyles/codeStyleConfig.xml
+serv/dump_test.go
+.idea/
+.gitignore
+/cache/user.json
+dumps/
+config/
+log/
