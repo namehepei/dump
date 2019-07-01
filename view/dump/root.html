@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="view/css/bulma.css"/>
+    <title>数据库备份</title>
+</head>
+<body style="background-color: #b8daff">
+    {{template "nav.html"}}
+    <div class="column is-10 is-offset-1">
+        <div class="box">
+            <div class="columns">
+                <div class="column is-half">
+                    <div class="column"><button class="button" onclick="allSelect(this)" name="database">全选</button></div>
+                    <div class="column">
+                        <div id="dbs" style="height: 300px;overflow: auto" class="box"></div>
+                    </div>
+
+                </div>
+                <div class="column is-half">
+                    <div class="column">
+                        <button class="button is-info" id="dbSedS"></button>
+                        <button class="button" onclick="allSelect(this)" name="table">全选</button>
+                    </div>
+                    <div class="column">
+                        <div id="tables" style="height: 300px;overflow: auto" class="box">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="columns">
+                <div class="column">
+                    <button class="button" onclick="dumpSome()">多database备份</button>
+                    <button class="button" onclick="dumpOne()">单database备份</button>
+                    <button class="button" onclick="getDDL()">DDL</button>
+                    <button class="button"></button>
+                </div>
+            </div>
+        </div>
+        <div class="box">
+            <div class="column">
+                <div id="showResponse"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function showResponse(res) {
+            let e = document.getElementById("showResponse")
+            e.innerText = ""
+            e.innerText = res
+        }
+
+        function getTrueFromMap(map) {
+            let data = new Array()
+            for (let key in map) {
+                if (map[key] == true) {
+                    data.push(key)
+                }
+            }
+            console.log(data)
+            return data
+        }
+
+        function allSelect(e) {
+            console.log(e, e.tag, e.tagName, e.tagLength, e.tag_param)
+            if (e.name == "table") {
+                for (let key in tableSelected) {
+                    // 改变数据
+                    tableSelected[key] = !tableSelected[key]
+                    // 改变样式
+                    clickButton(document.getElementsByName(key)[0])
+                }
+            }
+            if (e.name == "database") {
+                for (let key in dbSelected) {
+                    dbSelected[key] = !dbSelected[key]
+                    clickButton(document.getElementsByName(key)[0])
+                }
+            }
+        }
+
+        function clickButton(e) {
+            console.log("click before", e, e.className, e.name)
+            if (e.className == "button") {
+                e.className = "button is-success"
+            } else {
+                e.className = "button"
+            }
+
+            console.log("click after", e, e.className)
+        }
+
+        let dbSelected = new Map()
+        let dbSelectedS = {}
+        let tableSelected = new Map()
+        let tableSelectedS = {}
+
+        function listDatabase() {
+            sendPostHttp("/database",{},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    // alert(response["data"])
+                    let dbsR = response["data"]
+                    let dbs = document.getElementById("dbs")
+                    dbs.innerHTML = ""
+                    dbSelected = new Map()
+                    for (let i = 0; i < dbsR.length; i++) {
+                        // dbs.innerHTML += '<input type="checkbox" name="' + dbsR[i] + '" title="'+ dbsR[i] +'" onclick="listTable(this)">'
+                        // var form = layui.form;
+                        // form.render()
+                        dbs.innerHTML += '<a class="button" style="display: block;text-align: left;border:none" onclick="listTable(this)" name="' +
+                            dbsR[i] +'">'+ dbsR[i] +'</a>'
+                        // dbs.innerHTML += '<label class="checkbox" style="display: block"><input type="checkbox" value="" onclick="listTable(this)" ' +
+                        //     'name="'+ dbsR[i] +'">' + dbsR[i] + '</label>'
+                        dbSelected[dbsR[i]] = false
+                    }
+                }
+            })
+        }
+
+        function listTable(e) {
+            clickButton(e)
+            dbSelected[e.name] = !dbSelected[e.name]
+
+            dbSelectedS = e.name
+            document.getElementById('dbSedS').innerText = e.name
+
+            sendPostHttp("/table",{"database":dbSelectedS},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    // alert(response["data"])
+                    let tablesR = response["data"]
+                    let tables = document.getElementById("tables")
+                    tables.innerHTML = ""
+                    tableSelected = new Map()
+                    for (let i = 0; i < tablesR.length; i++) {
+                        tables.innerHTML += '<a class="button" style="display: block;text-align: left;border:none" onclick="tableSelect(this)" name="' +
+                            tablesR[i] +'">'+ tablesR[i] +'</a>'
+                        tableSelected[tablesR[i]] = false
+                    }
+
+                }
+            })
+        }
+
+        function tableSelect(e) {
+            clickButton(e)
+            tableSelected[e.name] = !tableSelected[e.name]
+
+            tableSelectedS = e.name
+        }
+
+
+
+        function getDDL(){
+            let tables = getTrueFromMap(tableSelected)
+            sendPostHttp("/ddl",{"database":dbSelectedS,"tables":tables},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    showResponse(response["data"])
+                }
+            })
+        }
+
+        function dumpSome(){
+            let data = getTrueFromMap(dbSelected)
+            sendPostHttp("/dump/some",{"databases":data},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    showResponse(response["data"])
+                }
+            })
+        }
+
+        function dumpOne(){
+            let tables = getTrueFromMap(tableSelected)
+            sendPostHttp("/dump/one",{"database":dbSelectedS,"tables":tables},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    showResponse(response["data"])
+                }
+            })
+        }
+
+        listDatabase()
+    </script>
+</body>
+</html>

@@ -1,10 +1,10 @@
 {
   "username": "root",
-  "password": "password",
-  "host": "127.0.0.1",
+  "password": "Bank123456().pass",
+  "host": "47.95.208.95",
   "timer": "* * * 1 0 0",
   "databases": [
-    "name_one","name_two"
+    "danger_game_test"
   ]
 }
 

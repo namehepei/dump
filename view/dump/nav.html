@@ -1,0 +1,60 @@
+<nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="navbar-menu">
+        <div class="navbar-start">
+            <a class="navbar-item" href="/">主页</a>
+            <a class="navbar-item" href="/dump">备份</a>
+            <a class="navbar-item" href="/run">还原</a>
+            <a class="navbar-item" href="/task">任务</a>
+        </div>
+        <div class="navbar-end">
+        </div>
+    </div>
+</nav>
+<script>
+    var host = window.location.origin
+    console.log(host)
+    function sendPostHttp(url,data, callback) {
+        let xhr = new XMLHttpRequest()
+        xhr.open("POST",host + url,true)
+        xhr.setRequestHeader("Content-Type","application/json")
+        let str = JSON.stringify(data)
+        xhr.send(str)
+        // 监听事件
+        xhr.onreadystatechange = function () {
+            // 4 为完成,表示接收到全部响应数据
+            if (xhr.readyState == 4) {
+                // || xhr.status == 304 存在缓冲
+                if (xhr.status == 200) {
+                    // 判断响应数据类型
+                    let type = xhr.getResponseHeader("Content-Type")
+                    console.log("type",type)
+                    console.log("text",xhr.responseText)
+                    if (type.indexOf("xml") != -1 && xhr.responseXML){
+                        // DOM
+                        response = xhr.responseXML
+                    } else if (type.indexOf("application/json") != -1 || type.indexOf("text/plain") != -1) {
+                        response = JSON.parse(xhr.responseText)
+                    } else {
+                        response = xhr.responseText
+                    }
+                    callback(response)
+                }
+            }
+        }
+    }
+
+    function showOrHid(eThis, id) {
+        let e = document.getElementById(id)
+        e.hidden = !e.hidden
+        if (e.hidden) {
+            eThis.innerText = "显示"
+        } else {
+            eThis.innerText = "隐藏"
+        }
+    }
+
+    function to(url) {
+        window.location.href = url
+    }
+
+</script>

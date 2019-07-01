@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="view/css/bulma.css"/>
+    <title>MySQL备份与运行</title>
+</head>
+<body style="background-color: #b8daff">
+    {{template "nav.html"}}
+    <div class="column is-10 is-offset-1">
+        <div class="box">
+            <from id="user">
+                <div class="field">
+                    <div class="control">
+                        <input id="host" class="input" type="text" placeholder="填写IP:PORT" list="hostList">
+                        <datalist id="hostList"></datalist>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="control">
+                        <input id="username" class="input" type="text" placeholder="填写username" list="usernameList">
+                        <datalist id="usernameList"></datalist>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="control">
+                        <input id="password" class="input" type="text" placeholder="填写password" list="passwordList">
+                        <datalist id="passwordList"></datalist>
+                    </div>
+                </div>
+            </from>
+
+            <div class="box" style="box-shadow: none">
+                <button onclick="conn()" class="button">连接数据库</button>
+            </div>
+        </div>
+        <div class="box" style="box-shadow: none">
+            <button onclick="to('dump')" class="button">备份</button>
+            <button onclick="to('run')" class="button">还原</button>
+        </div>
+    </div>
+
+    <script>
+        function conn() {
+            let username = document.getElementById("username").value
+            let ip_port = document.getElementById("host").value
+            let password = document.getElementById("password").value
+
+            sendPostHttp("/conn", {"username":username,"password":password,"host":ip_port},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    alert(response["msg"])
+                    loadDataList()
+                }
+            })
+        }
+
+        function loadDataList() {
+            let usernameListEle = document.getElementById("usernameList")
+            let passwordListEle = document.getElementById("passwordList")
+            let hostListEle = document.getElementById("hostList")
+
+            sendPostHttp("/cache/user", {}, function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    let usernameList = response["data"]["username"]
+                    usernameListEle.innerHTML = ""
+                    for (let i = 0; i < usernameList.length; i++) {
+                        usernameListEle.innerHTML += "<option>" + usernameList[i] + "</option>"
+                    }
+                    let passwordList = response["data"]["password"]
+                    passwordListEle.innerHTML = ""
+                    for (let i = 0; i < passwordList.length; i++) {
+                        passwordListEle.innerHTML += "<option>" + passwordList[i] + "</option>"
+                    }
+                    let hostList = response["data"]["host"]
+                    hostListEle.innerHTML = ""
+                    for (let i = 0; i < hostList.length; i++) {
+                        hostListEle.innerHTML += "<option>" + hostList[i] + "</option>"
+                    }
+                }
+            })
+        }
+
+        loadDataList()
+    </script>
+</body>
+</html>

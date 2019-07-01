@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="/view/layui/css/layui.css"  media="all">
+    <script type="text/javascript" src="/view/layui/layui.js"></script>
+    <title>数据库备份</title>
+    <style>
+        button {
+
+        }
+    </style>
+</head>
+<body>
+<div class="user">
+    <fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+        <legend>用户</legend>
+    </fieldset>
+    <form class="layui-form" action="">
+        <div class="layui-form-item">
+            <label class="layui-form-label"></label>
+            <div class="layui-input-inline">
+                <input type="text" id="host" lay-verify="required" autocomplete="on" placeholder="填写IP:PORT" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"></label>
+            <div class="layui-input-inline">
+                <input type="text" id="username" lay-verify="required" autocomplete="on" placeholder="填写username" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"></label>
+            <div class="layui-input-inline">
+                <input type="text" id="password" lay-verify="required" autocomplete="on" placeholder="填写password" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">默认database</label>
+            <div class="layui-input-inline">
+                <input type="text" name="title" lay-verify="title" autocomplete="on" placeholder="test" class="layui-input">
+            </div>
+        </div>
+    </form>
+</div>
+<div>
+    <button onclick="conn()" class="layui-btn">连接数据库</button>
+    <button onclick="listDatabase()" class="layui-btn">databases</button>
+</div>
+<div class="database">
+    <form class="layui-form" action="">
+        <div class="layui-form-item">
+            <label class="layui-form-label">复选框</label>
+            <div class="layui-input-block" id="dbs">
+            </div>
+        </div>
+
+    </form>
+    <form class="layui-form" action="">
+        <div class="layui-input-block" id="tables"></div>
+    </form>
+    <button>备份</button>
+</div>
+<script>
+    var host = window.location.origin
+    console.log(host)
+    function sendPostHttp(url,data, callback) {
+        let xhr = new XMLHttpRequest()
+        xhr.open("POST",host + url,true)
+        xhr.setRequestHeader("Content-Type","application/json")
+        let str = JSON.stringify(data)
+        xhr.send(str)
+        // 监听事件
+        xhr.onreadystatechange = function () {
+            // 4 为完成,表示接收到全部响应数据
+            if (xhr.readyState == 4) {
+                // || xhr.status == 304 存在缓冲
+                if (xhr.status == 200) {
+                    // 判断响应数据类型
+                    let type = xhr.getResponseHeader("Content-Type")
+                    console.log("type",type)
+                    console.log("text",xhr.responseText)
+                    if (type.indexOf("xml") != -1 && xhr.responseXML){
+                        // DOM
+                        response = xhr.responseXML
+                    } else if (type.indexOf("application/json") != -1 || type.indexOf("text/plain") != -1) {
+                        response = JSON.parse(xhr.responseText)
+                    } else {
+                        response = xhr.responseText
+                    }
+                    callback(response)
+                }
+            }
+        }
+    }
+</script>
+<script>
+    function conn() {
+        let username = document.getElementById("username").value
+        let ip_port = document.getElementById("host").value
+        let password = document.getElementById("password").value
+
+        sendPostHttp("/conn", {"username":username,"password":password,"host":ip_port},function (response) {
+            console.log(response)
+            if (response["msg"] != "ok") {
+                alert(response["msg"])
+            } else {
+                alert(response["data"])
+            }
+        })
+    }
+
+    function listDatabase() {
+        sendPostHttp("/database",{},function (response) {
+            console.log(response)
+            if (response["msg"] != "ok") {
+                alert(response["msg"])
+            } else {
+                let dbsR = response["data"]
+                let dbs = document.getElementById("dbs")
+                dbs.innerHTML = ""
+                for (let i = 0; i < dbsR.length; i++) {
+                    dbs.innerHTML += '<input type="checkbox" name="like[' + dbsR[i] + ']" title="'+ dbsR[i] +'">'
+                }
+                var form = layui.form;
+                form.render()
+            }
+        })
+    }
+
+    layui.use(['form', 'layedit', 'laydate'], function(){})
+</script>
+</body>
+</html>

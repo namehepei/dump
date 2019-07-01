@@ -1,9 +1,9 @@
 {
   "username": "root",
-  "password": "password",
+  "password": "Bank123456().pass",
   "host": "localhost",
   "timer": "* * * 1 0 0",
   "databases": [
-    "name_one","name_two"
+    "danger_game_test"
   ]
 }

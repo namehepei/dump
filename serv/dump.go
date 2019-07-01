@@ -1,83 +1,138 @@
-package body
+package serv
 
 import (
 	"bytes"
+	"database/sql"
+	"dump/cache"
+	"fmt"
+	"net/http"
 	"os"
 	"runtime/debug"
 	"strings"
+	"text/template"
 	"time"
 	"util/database"
-	"util/database/info"
 	"util/think"
 	"util/thinkFile"
+	"util/thinkHttp"
+	"util/thinkJson"
 	"util/thinkLog"
-	"util/thinkTimer"
 )
 
-var dumpPath = "./dumps/"
-var addUseDatabase = false
+var db *sql.DB
 
-func GetAllDatabase(userName, password, host string) []string {
-	sourceName := userName + ":" + password + "@tcp(" + host + ":3306)/test"
-	db := database.SetConn(sourceName)
-	defer db.Close()
-	return info.GetDatabases()
+const dumpPath = "./dumps/"
+
+var userName string
+var password string
+var host string
+
+func DumpPage(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseGlob("./view/dump/*.html")
+	think.IsNil(err)
+	tmpl.ExecuteTemplate(w, "root.html", nil)
 }
 
-// 因为MysqlDump()使用包database.Idb,故会关闭主函数的db,不可以在主函数中存在db的情况下使用
-func MysqlDumpTask(nextTime, userName, password, host string, databases []string) {
-	if len(databases) == 0 {
-		databases = GetAllDatabase(userName, password, host)
-	}
-	f := func() {
-		for i := 0; i < len(databases); i++ {
-			MysqlDump(userName, password, host, databases[i], addUseDatabase)
-		}
-	}
-
-	go thinkTimer.TaskNow(nextTime, f)
+// 建立数据库连接
+func SetDB(w http.ResponseWriter, r *http.Request) {
+	body := thinkHttp.GetRequestBody(r)
+	obj := thinkJson.MustGetJsonObject(body)
+	userName = obj.MustGetString("username")
+	password = obj.MustGetString("password")
+	host = obj.MustGetString("host")
+	dsn := userName + ":" + password + "@tcp(" + host + ")/test"
+	fmt.Println(dsn)
+	db = database.SetConn(dsn)
+	cache.AddCache(host, userName, password)
+	//defer db.Close()
+	thinkHttp.WriteJsonOk(w, db.Stats())
 }
 
-func MysqlDump(userName, password, host, DatabaseName string, addUseDatabase bool) {
-	// mysql
-	sourceName := userName + ":" + password + "@tcp(" + host + ":3306)/" + DatabaseName
-	thinkLog.DebugLog.Println("db", sourceName)
-	db := database.SetConn(sourceName)
-	defer db.Close()
+// 复制几个库的全部表
+func DumpDatabases(w http.ResponseWriter, r *http.Request) {
+	body := thinkHttp.GetRequestBody(r)
+	obj := thinkJson.MustGetJsonObject(body)
+	databases := obj.MustGetStringList("databases")
 
+	for i := 0; i < len(databases); i++ {
+		MysqlDump(databases[i], database.GetTables(databases[i]))
+	}
+
+	thinkHttp.WriteJsonOk(w, "ok")
+}
+
+// 复制一个库的几个表
+func DumpTables(w http.ResponseWriter, r *http.Request) {
+	body := thinkHttp.GetRequestBody(r)
+	obj := thinkJson.MustGetJsonObject(body)
+	databaseName := obj.MustGetString("database")
+	tables := obj.MustGetStringList("tables")
+
+	MysqlDump(databaseName, tables)
+
+	thinkHttp.WriteJsonOk(w, "ok")
+}
+
+func MysqlDump(databaseName string, tables []string) {
 	// 目录(\转义字符)
-	filePath := dumpPath + time.Now().Format("20060102") + "/" + DatabaseName
+	filePath := dumpPath + time.Now().Format("20060102") + "/" + databaseName
 	filePath = thinkFile.GetAbsPathWith(filePath)
 	fileFullNameSlice := make([]string, 0)
-	tables := getTables(DatabaseName)
+
 	for i := 0; i < len(tables); i++ {
-		TableName := tables[i]["TABLE_NAME"]
+		tableName := tables[i]
 		//fmt.Println("TableName",TableName)
-		tableFullName := DatabaseName + "." + TableName
-		InsertString := getInsertValues(TableName)
-		DDL := getCreateTable(tableFullName)
+		InsertString := getInsertValues(databaseName, tableName)
+		DDL := database.GetDDL(databaseName + "." + tableName)
 
 		var buffer bytes.Buffer
-		if addUseDatabase {
-			buffer.WriteString("USE " + DatabaseName + ";\n")
-		}
-		buffer.WriteString("DROP TABLE IF EXISTS `" + TableName + "`;\n")
+
+		buffer.WriteString("DROP TABLE IF EXISTS `" + tableName + "`;\n")
 		buffer.WriteString(DDL + ";\n")
-		buffer.WriteString("LOCK TABLES `" + TableName + "` WRITE;\n")
+		buffer.WriteString("LOCK TABLES `" + tableName + "` WRITE;\n")
 		buffer.WriteString(InsertString)
 		buffer.WriteString("UNLOCK TABLES;\n")
 
 		comment := buffer.String()
 		//fmt.Println(comment)
-		fileName := TableName + ".sql"
+		fileName := tableName + ".sql"
 		fileFullName := createSql(filePath, fileName, comment)
 		fileFullNameSlice = append(fileFullNameSlice, fileFullName)
 	}
-	thinkLog.DebugLog.Println("dump "+DatabaseName+"finish", filePath)
+	thinkLog.DebugLog.Println("dump "+databaseName+" finish", filePath)
 	//for i := 0; i < len(fileFullNameSlice); i++ {
 	//	fmt.Println(fileFullNameSlice[i])
 	//}
 	lsDumpFile(filePath, fileFullNameSlice)
+}
+
+func DatabasesInMysql(w http.ResponseWriter, r *http.Request) {
+	list := database.GetDatabases()
+	thinkHttp.WriteJsonOk(w, list)
+}
+
+func TablesInMysql(w http.ResponseWriter, r *http.Request) {
+	body := thinkHttp.GetRequestBody(r)
+	obj := thinkJson.MustGetJsonObject(body)
+	databaseName := obj.MustGetString("database")
+	list := database.GetTables(databaseName)
+	thinkHttp.WriteJsonOk(w, list)
+}
+
+func DdlInMysql(w http.ResponseWriter, r *http.Request) {
+	body := thinkHttp.GetRequestBody(r)
+	obj := thinkJson.MustGetJsonObject(body)
+	databaseName := obj.MustGetString("database")
+	tables := obj.MustGetStringList("tables")
+
+	s := ""
+	for i := 0; i < len(tables); i++ {
+		table := tables[i]
+		s += database.GetDDL(databaseName + "." + table)
+		s += ";\n\n"
+	}
+
+	thinkHttp.WriteJsonOk(w, s)
 }
 
 //
@@ -100,27 +155,11 @@ func createSql(filePath, fileName, comment string) string {
 	return file.Name()
 }
 
-// show tables
-func getTables(databaseName string) []map[string]string {
-	sqlString := "SELECT distinct TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ?"
-	_, rows := database.SelectMap(nil, sqlString, databaseName)
-
-	return rows
-}
-
-// DDL
-func getCreateTable(tableName string) string {
-	sqlString := "SHOW CREATE TABLE " + tableName
-	_, rows := database.SelectMap(nil, sqlString)
-	//fmt.Println(rows)
-	return rows[0]["Create Table"]
-}
-
 // INSERT VALUES
 // 实现根据 VALUES (,,,) 的大小自动切割数据
-func getInsertValues(tableName string) string {
+func getInsertValues(databaseName, tableName string) string {
 	// 获取全部的数据rows [][]string
-	sqlString := "SELECT * FROM " + tableName
+	sqlString := "SELECT * FROM " + databaseName + "." + tableName
 	_, rows := database.SelectList(nil, sqlString)
 	// 无记录
 	if len(rows) == 0 {

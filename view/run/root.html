@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ch">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="view/css/bulma.css"/>
+    <title>数据库运行</title>
+</head>
+<body style="background-color: #b8daff">
+    {{template "nav.html"}}
+    <div class="column is-10 is-offset-1">
+        <div class="box">
+            <div class="columns">
+                <div class="column">
+                    <button class="button" onclick="listDatabase()">还原数据库:</button>
+                    <input id="db" class="input" type="text" list="dbList">
+                    <datalist id="dbList"></datalist>
+                </div>
+            </div>
+            <div class="columns">
+                <div class="column is-3">
+                    <button class="button">日期</button>
+                    <div id="fileDate" style="height: 300px;overflow: auto" class="box"></div>
+                </div>
+                <div class="column is-3">
+                    <button class="button">数据库</button>
+                    <div id="fileDatabase" style="height: 300px;overflow: auto" class="box">
+                    </div>
+                </div>
+                <div class="column is-6">
+                    <button class="button">SQL文件</button>
+                    <div id="fileTables" style="height: 300px;overflow: auto" class="box">
+                    </div>
+                </div>
+            </div>
+            <div class="columns">
+                <div class="column">
+                    <button class="button" onclick="runOne()">还原</button>
+                </div>
+            </div>
+        </div>
+        <div class="box">
+            <div class="column">
+                <div id="showResponse"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showResponse(res) {
+            let e = document.getElementById("showResponse")
+            e.innerText = ""
+            e.innerText = res
+        }
+
+        function clickButton(e) {
+            console.log("click before", e, e.className, e.name)
+            if (e.className == "button") {
+                e.className = "button is-success"
+            } else {
+                e.className = "button"
+            }
+
+            console.log("click after", e, e.className)
+        }
+
+        function listDatabase() {
+            sendPostHttp("/database",{},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    let dbListEle = document.getElementById("dbList")
+                    let dbList = response["data"]
+                    dbListEle.innerHTML = ""
+                    for (let i = 0; i < dbList.length; i++) {
+                        dbListEle.innerHTML += "<option>" + dbList[i] + "</option>"
+                    }
+                }
+            })
+        }
+
+        let fileDateSelected = {}
+        let fileDateSelectedEleLast = {}
+        let fileDbSelected = {}
+        let fileDbSelectedEleLast = {}
+        function listDirOne() {
+            sendPostHttp("/run/dir",{"filePath":""},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    // alert(response["data"])
+                    let list = response["data"]
+                    let listEle = document.getElementById("fileDate")
+                    listEle.innerHTML = ""
+                    for (let i = 0; i < list.length; i++) {
+                        listEle.innerHTML += '<a class="button" style="display: block;text-align: left;border:none" onclick="listDirTwo(this)" name="' +
+                            list[i] +'">'+ list[i] +'</a>'
+                    }
+                }
+            })
+        }
+
+        function listDirTwo(e) {
+            clickButton(fileDateSelectedEleLast)
+            clickButton(e)
+            fileDateSelectedEleLast = e
+            fileDateSelected = e.name
+            sendPostHttp("/run/dir",{"filePath":fileDateSelected},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    let list = response["data"]
+                    let listEle = document.getElementById("fileDatabase")
+                    listEle.innerHTML = ""
+                    for (let i = 0; i < list.length; i++) {
+                        listEle.innerHTML += '<a class="button" style="display: block;text-align: left;border:none" onclick="listDirThree(this)" ' +
+                            'name="' + list[i] +'">'+ list[i] +'</a>'
+                    }
+                }
+            })
+        }
+
+        function listDirThree(e) {
+            clickButton(fileDbSelectedEleLast)
+            clickButton(e)
+            fileDbSelectedEleLast = e
+            fileDbSelected = e.name
+            sendPostHttp("/run/dir",{"filePath":fileDateSelected + "/" +fileDbSelected},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    let list = response["data"]
+                    let listEle = document.getElementById("fileTables")
+                    listEle.innerHTML = ""
+                    for (let i = 0; i < list.length; i++) {
+                        listEle.innerHTML += '<a class="button is-success" style="display: block;text-align: left;border:none" onclick="" ' +
+                            'name="' + list[i] +'">'+ list[i] +'</a>'
+                    }
+                }
+            })
+        }
+
+        function runOne(){
+            let db = document.getElementById("db").value
+            if (db == "") {
+                alert("请选择还原数据库")
+                return
+            }
+            sendPostHttp("/run/one",{"database":db,"filePath":fileDateSelected + "/" +fileDbSelected},function (response) {
+                console.log(response)
+                if (response["msg"] != "ok") {
+                    alert(response["msg"])
+                } else {
+                    showResponse(response["data"])
+                }
+            })
+        }
+
+        listDatabase()
+        listDirOne()
+    </script>
+</body>
+</html>
